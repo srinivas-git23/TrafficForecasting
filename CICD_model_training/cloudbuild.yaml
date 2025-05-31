@@ -1,0 +1,40 @@
+steps:
+  # 1. Build the Docker image for the Cloud Run Job
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "us-east1-docker.pkg.dev/canvas-joy-456715-b1/traffic-prediction-pipeline/stgcn-job:latest",
+        "."
+      ]
+
+  # 2. Push the Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "us-east1-docker.pkg.dev/canvas-joy-456715-b1/traffic-prediction-pipeline/stgcn-job:latest"
+      ]
+
+  # 3. Deploy (update) the Cloud Run Job definition (idempotent)
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      [
+        "run", "jobs", "deploy", "stgcn-job",
+        "--image", "us-east1-docker.pkg.dev/canvas-joy-456715-b1/traffic-prediction-pipeline/stgcn-job:latest",
+        "--region", "us-east1",
+        "--tasks", "1",
+        "--set-env-vars", "GOOGLE_CLOUD_PROJECT=canvas-joy-456715-b1"
+      ]
+
+  # 4. Run the Cloud Run Job (this submits the KFP pipeline via run_pipeline.py)
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      [
+        "run", "jobs", "execute", "stgcn-job",
+        "--region", "us-east1",
+        "--wait"
+      ]
